@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, render_template, url_for
+from flask import Flask, request, redirect, render_template, url_for, jsonify
 import string, random
 import sqlite3
 
@@ -31,15 +31,24 @@ def get_long_url(short_code):
         result = c.fetchone()
         return result[0] if result else None
 
-@app.route('/', methods=['GET', 'POST'])
-def home():
-    short_url = None
-    if request.method == 'POST':
-        long_url = request.form['url']
+@app.route('/shorten', methods=['POST'])
+def shorten():
+    try:
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({'error': 'No URL provided'}), 400
+        
+        long_url = data['url']
         short_code = generate_short_code()
         insert_url(short_code, long_url)
         short_url = request.host_url + short_code
-    return render_template('index.html', short_url=short_url)
+        return jsonify({'shortUrl': short_url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/', methods=['GET'])
+def home():
+    return render_template('index.html')
 
 @app.route('/<short_code>')
 def redirect_short_url(short_code):
